@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#262e3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fretes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Diário de Fretes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: app de celular — barra do topo cor de asfalto com faixa tracejada, três telas (Início / Histórico / Backup) e barra de abas embaixo, polegar-first */
+:root{
+  --bg:#eceff2; --card:#ffffff; --fg:#1b222d; --muted:#5d6775; --line:#d6dbe2;
+  --accent:#d9822b; --accent-ink:#ffffff; --road:#262e3a; --road-fg:#f1f3f6; --road-muted:#a9b2bf;
+  --ok:#2c7a4c; --ok-ink:#ffffff; --warn:#b0611a; --danger:#b3362f; --chip:#e2e6eb; --field:#f4f6f8;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --tabbar-h:64px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --card:#1c232c; --fg:#e8ecf1; --muted:#9aa4b1; --line:#303946;
+  --accent:#eb9a45; --accent-ink:#1a1206; --road:#0c1015; --road-fg:#eef1f5; --road-muted:#8f99a7;
+  --ok:#55b97f; --ok-ink:#06150c; --warn:#e3a15a; --danger:#ec776f; --chip:#28313c; --field:#161c23; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --card:#1c232c; --fg:#e8ecf1; --muted:#9aa4b1; --line:#303946;
+  --accent:#eb9a45; --accent-ink:#1a1206; --road:#0c1015; --road-fg:#eef1f5; --road-muted:#8f99a7;
+  --ok:#55b97f; --ok-ink:#06150c; --warn:#e3a15a; --danger:#ec776f; --chip:#28313c; --field:#161c23; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--road)}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance;letter-spacing:.01em}
+h2{font-size:1.4rem;line-height:1.1}
+h3{font-size:1.1rem}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.note{font-size:.85rem;color:var(--muted)}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.col{max-width:560px;margin:0 auto}
+
+/* barra do topo */
+.appbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--road);color:var(--road-fg);
+  background-image:repeating-linear-gradient(90deg,var(--accent) 0 22px,transparent 22px 38px);background-size:100% 3px;background-repeat:no-repeat;background-position:bottom}
+.appbar .col{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 14px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:1.45rem;letter-spacing:.02em;line-height:1;display:flex;align-items:center;gap:10px}
+.brand svg{flex:none}
+.appbar .hoje{font-family:var(--f-mono);font-size:.8rem;color:var(--road-muted);text-transform:capitalize}
+
+main{padding-block:16px calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px) + 28px)}
+.view{display:flex;flex-direction:column;gap:16px}
+
+/* faixa "hoje" */
+.hoje-strip{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,.8fr) minmax(0,1.4fr);background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.hoje-strip div{padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.hoje-strip div+div{border-left:1px solid var(--line)}
+.hoje-strip b{font-family:var(--f-mono);font-weight:500;font-size:1rem;font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.2}
+
+/* cartões e campos */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:16px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--muted);cursor:pointer;min-height:36px}
+.toggle input{width:20px;height:20px;accent-color:var(--accent);margin:0}
+.leg{display:grid;grid-template-columns:22px minmax(0,1fr);gap:0 12px}
+.rail{display:flex;flex-direction:column;align-items:center;padding-top:4px}
+.dot{width:14px;height:14px;border-radius:50%;border:3px solid var(--accent);background:var(--card);flex:none}
+.dot.end{background:var(--accent)}
+.rail .line{flex:1;width:0;border-left:2px dashed var(--line);margin-top:4px;min-height:24px}
+.leg-body{display:flex;flex-direction:column;gap:10px;padding-bottom:16px;min-width:0}
+.leg-title{font-family:var(--f-display);font-weight:700;font-size:1rem;letter-spacing:.08em;text-transform:uppercase;line-height:1}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.grid2 .full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:.78rem;font-weight:600;color:var(--muted)}
+.field input,.field textarea,textarea{font:inherit;font-size:1rem;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:11px 12px;min-height:48px;width:100%;min-width:0}
+.field input.num{font-family:var(--f-mono)}
+input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.with-btn{display:flex;gap:6px}
+.with-btn input{flex:1}
+.mini{border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:10px;font:600 .85rem var(--f-body);padding:0 12px;cursor:pointer;white-space:nowrap;min-height:40px}
+.btn{border:0;border-radius:12px;padding:12px 18px;min-height:48px;font:600 1rem var(--f-body);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.plain{background:var(--chip);color:var(--fg)}
+.btn.outline{background:transparent;color:var(--fg);border:1.5px solid var(--line)}
+.btn.go{background:var(--ok);color:var(--ok-ink)}
+.btn.big{width:100%;min-height:56px;font-size:1.08rem;font-weight:700}
+.btn.go[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.btn svg{flex:none}
+.link{background:none;border:0;color:var(--fg);font:600 .9rem var(--f-body);cursor:pointer;padding:8px 8px;border-radius:8px;min-height:40px;text-decoration:none;display:inline-flex;align-items:center}
+.link.del{color:var(--danger)}
+.link.accent{color:var(--accent)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.actions.stack{flex-direction:column;align-items:stretch}
+.msg{font-size:.9rem}
+.msg.err{color:var(--danger)} .msg.ok{color:var(--ok)}
+.km-preview{font-family:var(--f-mono);color:var(--muted);font-size:.9rem}
+
+/* endereço da empresa */
+.local{display:flex;flex-direction:column;gap:6px}
+.local-ok{display:flex;align-items:center;gap:8px}
+.local-link{flex:1;min-width:0;color:var(--accent);font-size:.9rem;font-weight:600;text-decoration:none;overflow-wrap:anywhere;padding-left:18px;position:relative}
+.local-link::before{content:"";position:absolute;left:2px;top:.3em;width:10px;height:10px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--accent)}
+.local-alt{min-height:32px;padding:0 10px;font-size:.8rem}
+.local-novo{display:flex;flex-direction:column;gap:6px}
+.local-novo input{font:inherit;font-size:.95rem;color:var(--fg);background:var(--field);border:1.5px dashed var(--accent);border-radius:10px;padding:10px 12px;min-height:44px;width:100%;min-width:0}
+.maps-link{font-size:.85rem;font-weight:600;color:var(--accent);text-decoration:none;align-self:flex-start;padding:4px 0}
+
+/* despesas */
+.desp{border:1px solid var(--line);border-radius:12px;padding:0 14px;background:var(--card)}
+.desp summary{cursor:pointer;min-height:48px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;list-style:none}
+.desp summary::-webkit-details-marker{display:none}
+.desp summary::before{content:"+";display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--fg);font-weight:700;line-height:1;flex:none}
+.desp[open] summary::before{content:"−"}
+.desp-total{margin-left:auto;color:var(--danger);font-weight:500;font-size:.9rem}
+.desp-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding-bottom:14px}
+.desp-grid .field:last-child{grid-column:1/-1}
+
+/* partida */
+#form.rapido .completo{display:none}
+#form:not(.rapido) .so-rapido{display:none}
+.resumo{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:4px 22px;align-items:end;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.resumo b{display:block;font-size:1.5rem;font-weight:500;line-height:1.1}
+@media (max-width:420px){.resumo{grid-template-columns:auto auto}.resumo .note{grid-column:1/-1}}
+
+/* em rota */
+.rota{display:flex;flex-direction:column;gap:12px}
+.rota-card{background:var(--card);border:2px solid var(--accent);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px;box-shadow:0 6px 20px -12px color-mix(in srgb,var(--accent) 70%,transparent)}
+.rota-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pulse{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--warn)}
+.pulse::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--warn);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+.rota-from{font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
+.rota-to{font-family:var(--f-display);font-weight:700;font-size:1.75rem;line-height:1.05;overflow-wrap:anywhere}
+.rota-to small{display:block;font-family:var(--f-body);font-size:.75rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.rota-meta{display:flex;gap:18px;flex-wrap:wrap}
+.rota-meta div{display:flex;flex-direction:column}
+.rota-meta b{font-family:var(--f-mono);font-weight:500;font-size:1.05rem}
+.rota-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.rota-form .full{grid-column:1/-1}
+.rota-card .desp{background:var(--field)}
+
+/* histórico */
+.panel{background:var(--road);color:var(--road-fg);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px;
+  background-image:repeating-linear-gradient(90deg,var(--accent) 0 22px,transparent 22px 38px);background-size:100% 3px;background-repeat:no-repeat;background-position:bottom}
+.panel .label{color:var(--road-muted)}
+.panel-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.panel-head .tabs{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}
+.panel-head input{width:100%;font:500 .95rem var(--f-mono);background:#ffffff14;color:var(--road-fg);border:1px solid #ffffff2e;border-radius:10px;padding:8px 10px;min-height:42px;color-scheme:dark;min-width:0}
+.ghost{border:1px solid #ffffff38;background:transparent;color:var(--road-fg);border-radius:10px;padding:0 12px;min-height:42px;font:600 .9rem var(--f-body);cursor:pointer}
+.tabs{display:inline-flex;background:#ffffff14;border-radius:10px;padding:3px}
+.tabs button{border:0;background:transparent;color:var(--road-muted);font:600 .9rem var(--f-body);padding:0 16px;min-height:36px;border-radius:8px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--road-fg);color:var(--road)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
+.stat{min-width:0}
+.stat b{display:block;font-family:var(--f-mono);font-size:1.2rem;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat.liq b{color:var(--accent)}
+@media (max-width:400px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.stat.liq{grid-column:1/-1}}
+.list-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.list{display:flex;flex-direction:column;gap:10px}
+.day-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:6px;border-bottom:1px solid var(--line);padding-bottom:4px;flex-wrap:wrap}
+.day-head span{font-family:var(--f-mono);color:var(--muted);font-size:.8rem}
+.trip{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:start}
+.route{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
+.route .t{font-family:var(--f-mono);font-size:.85rem;color:var(--muted)}
+.route .e{font-weight:600;overflow-wrap:anywhere}
+.route .k{display:none}
+.route .arrow{grid-column:1/-1;height:10px;border-left:2px dashed var(--line);margin-left:20px}
+.km{text-align:right}
+.km b{font-family:var(--f-mono);font-size:1.3rem;font-weight:500;display:block;line-height:1.1}
+.km small{font-family:var(--f-mono);color:var(--muted);font-size:.72rem}
+.pill{display:inline-flex;align-items:center;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-radius:999px;padding:3px 9px;background:var(--chip);color:var(--muted)}
+.pill.open{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.pill.done{color:var(--ok);background:color-mix(in srgb,var(--ok) 13%,transparent)}
+.trip-foot{grid-column:1/-1;display:flex;gap:2px 6px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px}
+.trip-foot .obs{color:var(--muted);font-size:.88rem;flex:1 1 100%;min-width:0;overflow-wrap:anywhere;order:-1}
+.trip-foot .obs:empty{display:none}
+.trip-foot .pill{margin-right:auto}
+.trip-foot a.link{color:var(--accent)}
+.emp-link{color:inherit;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.custos{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px;font-family:var(--f-mono);font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.custos .c-frete{color:var(--fg)}
+.custos .c-desp{color:var(--danger)}
+.custos .c-liq{color:var(--ok);font-weight:500}
+.custos .c-liq.neg{color:var(--danger)}
+.empty{text-align:center;color:var(--muted);padding:32px 16px;border:1.5px dashed var(--line);border-radius:14px}
+
+/* backup */
+.backup .colar{display:flex;flex-direction:column;gap:8px;padding-bottom:14px}
+.backup textarea{resize:vertical;font-size:.9rem}
+.aviso{display:flex;gap:12px;align-items:flex-start;background:color-mix(in srgb,var(--warn) 10%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 35%,var(--line));border-radius:14px;padding:14px;font-size:.9rem}
+.aviso svg{flex:none;color:var(--warn);margin-top:2px}
+
+/* barra de abas */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--card);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -6px 18px -14px rgb(0 0 0 / .35)}
+.tabbar .col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));height:var(--tabbar-h)}
+.tabbar button{border:0;background:none;color:var(--muted);font:600 .74rem var(--f-body);letter-spacing:.02em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;position:relative}
+.tabbar button[aria-current="page"]{color:var(--accent)}
+.tabbar button[aria-current="page"]::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+.tabbar .badge{position:absolute;top:9px;left:calc(50% + 6px);width:9px;height:9px;border-radius:50%;background:var(--warn);border:2px solid var(--card)}
+
+/* aviso flutuante */
+.toast{position:fixed;left:50%;transform:translate(-50%,8px);bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px) + 12px);z-index:40;
+  max-width:min(92vw,520px);background:var(--fg);color:var(--bg);padding:12px 16px;border-radius:12px;font-weight:600;font-size:.92rem;box-shadow:0 10px 30px -10px rgb(0 0 0 / .45);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.err{background:var(--danger);color:#fff}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="appbar gutter">
+  <div class="col">
+    <div class="brand">
+      <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><rect x="1" y="3" width="17" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M18 7h5.5l4 4.5V15H18z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="17.5" r="2.5" fill="var(--accent)"/><circle cx="22.5" cy="17.5" r="2.5" fill="var(--accent)"/></svg>
+      Diário de Fretes
+    </div>
+    <span class="hoje" id="hoje-label"></span>
+  </div>
+</header>
+
+<main class="gutter">
+  <div class="col">
+
+  <!-- INÍCIO -->
+  <section class="view" id="v-inicio" aria-label="Início">
+    <div class="hoje-strip" aria-label="Resumo de hoje">
+      <div><span class="label">Trechos hoje</span><b id="h-trechos">0</b></div>
+      <div><span class="label">Km hoje</span><b id="h-km">0</b></div>
+      <div><span class="label">Líquido</span><b id="h-liq">R$ 0</b></div>
+    </div>
+
+    <section class="rota" id="em-rota" aria-label="Em rota" hidden></section>
+
+    <form class="card rapido" id="form" novalidate>
+      <div class="card-head">
+        <h2 id="form-title">Nova partida</h2>
+        <label class="toggle"><input type="checkbox" id="so-entrega"> Só entrega</label>
+      </div>
+
+      <div class="field completo" style="max-width:210px">
+        <label for="f-data">Dia</label>
+        <input type="date" id="f-data" required>
+      </div>
+
+      <div>
+        <div class="leg" id="leg-coleta">
+          <div class="rail"><span class="dot"></span><span class="line"></span></div>
+          <div class="leg-body">
+            <p class="leg-title">Coleta</p>
+            <div class="field"><label for="f-coleta-emp">Empresa</label><input id="f-coleta-emp" autocomplete="off" list="empresas" placeholder="Onde retira o material" enterkeyhint="next">
+              <div class="local" id="loc-coleta" hidden>
+                <div class="local-ok"><a class="local-link" target="_blank" rel="noopener"></a><button type="button" class="mini local-alt">Alterar</button></div>
+                <div class="local-novo"><input class="local-end" id="loc-coleta-end" autocomplete="off" placeholder="Endereço ou link do Maps (só na 1ª vez)"><a class="maps-link local-buscar" target="_blank" rel="noopener">Achar no Maps ↗</a></div>
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field"><label for="f-coleta-hora">Horário</label><div class="with-btn"><input type="time" id="f-coleta-hora"><button type="button" class="mini" data-agora="f-coleta-hora">Agora</button></div></div>
+              <div class="field completo"><label for="f-km-saida">Km na saída</label><input class="num" id="f-km-saida" inputmode="numeric" placeholder="opcional"></div>
+            </div>
+          </div>
+        </div>
+        <div class="leg">
+          <div class="rail"><span class="dot end"></span></div>
+          <div class="leg-body" style="padding-bottom:0">
+            <p class="leg-title">Destino</p>
+            <div class="field"><label for="f-entrega-emp">Empresa</label><input id="f-entrega-emp" autocomplete="off" list="empresas" placeholder="Para onde leva" enterkeyhint="done">
+              <div class="local" id="loc-entrega" hidden>
+                <div class="local-ok"><a class="local-link" target="_blank" rel="noopener"></a><button type="button" class="mini local-alt">Alterar</button></div>
+                <div class="local-novo"><input class="local-end" id="loc-entrega-end" autocomplete="off" placeholder="Endereço ou link do Maps (só na 1ª vez)"><a class="maps-link local-buscar" target="_blank" rel="noopener">Achar no Maps ↗</a></div>
+              </div>
+            </div>
+            <div class="grid2 completo">
+              <div class="field"><label for="f-entrega-hora">Horário da entrega</label><div class="with-btn"><input type="time" id="f-entrega-hora"><button type="button" class="mini" data-agora="f-entrega-hora">Agora</button></div></div>
+              <div class="field"><label for="f-km-chegada">Km na chegada</label><input class="num" id="f-km-chegada" inputmode="numeric" placeholder="opcional"></div>
+              <div class="field full">
+                <label for="f-km-rota">Km do trecho</label>
+                <div class="with-btn"><input class="num" id="f-km-rota" inputmode="decimal" placeholder="ex.: 23,5"><a class="mini" id="map-rota" target="_blank" rel="noopener" hidden style="display:inline-flex;align-items:center;text-decoration:none">Ver no Maps ↗</a></div>
+                <span class="note" id="rota-hint"></span>
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="field"><label for="f-valor">Valor do frete (R$)</label><input class="num" id="f-valor" inputmode="decimal" autocomplete="off" placeholder="opcional"></div>
+              <div class="field"><label for="f-obs">Observação</label><input id="f-obs" autocomplete="off" placeholder="NF, material…"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <details class="desp" id="desp-form">
+        <summary>Despesas do trecho <span class="note">(opcional)</span><span class="desp-total mono" id="desp-form-total"></span></summary>
+        <div class="desp-grid">
+          <div class="field"><label for="f-pedagio">Pedágio (R$)</label><input class="num" id="f-pedagio" inputmode="decimal" autocomplete="off" placeholder="0,00"></div>
+          <div class="field"><label for="f-combustivel">Combustível (R$)</label><input class="num" id="f-combustivel" inputmode="decimal" autocomplete="off" placeholder="0,00"></div>
+          <div class="field"><label for="f-outros">Outros (R$)</label><input class="num" id="f-outros" inputmode="decimal" autocomplete="off" placeholder="estacionamento, refeição"></div>
+        </div>
+      </details>
+      <datalist id="empresas"></datalist>
+
+      <div class="resumo so-rapido" id="partida-resumo" aria-live="polite">
+        <div><span class="label">Partida</span><b class="mono" id="pr-hora">--:--</b></div>
+        <div><span class="label">Km do trecho</span><b class="mono" id="pr-km">—</b></div>
+        <p class="note" id="pr-nota">Preencha a coleta e o destino.</p>
+      </div>
+
+      <div class="actions stack">
+        <a class="btn go big so-rapido" id="btn-partida" href="#" target="_blank" rel="noopener" role="button">
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5v13l11-6.5z" fill="currentColor"/></svg>
+          Registrar partida e abrir Maps</a>
+        <button type="submit" class="btn primary big completo" id="btn-salvar">Salvar trecho completo</button>
+        <span class="km-preview completo" id="km-preview"></span>
+        <div class="actions" style="justify-content:center">
+          <button type="button" class="link" id="btn-modo">Lançar trecho já feito</button>
+          <button type="button" class="link" id="btn-cancelar" hidden>Cancelar edição</button>
+        </div>
+      </div>
+      <p class="note so-rapido" id="nota-form">A hora de partida é registrada no toque do botão e o Maps abre já navegando. Rotas já feitas trazem o km sozinhas.</p>
+    </form>
+  </section>
+
+  <!-- HISTÓRICO -->
+  <section class="view" id="v-historico" aria-label="Histórico" hidden>
+    <section class="panel" aria-label="Resumo do período">
+      <div class="panel-head">
+        <div class="tabs" role="group" aria-label="Período">
+          <button type="button" id="tab-dia" aria-pressed="true">Dia</button>
+          <button type="button" id="tab-mes" aria-pressed="false">Mês</button>
+        </div>
+        <input type="date" id="filtro-data" aria-label="Data">
+        <input type="month" id="filtro-mes" aria-label="Mês" hidden>
+        <button type="button" class="ghost" id="btn-hoje">Hoje</button>
+        <span class="label" id="periodo-label" hidden>Dia</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="label">Trechos</span><b id="s-trechos">0</b></div>
+        <div class="stat"><span class="label">Km rodados</span><b id="s-km">0</b></div>
+        <div class="stat"><span class="label" id="s-l3">1ª coleta</span><b id="s-3">--:--</b></div>
+        <div class="stat"><span class="label" id="s-l4">Última entrega</span><b id="s-4">--:--</b></div>
+        <div class="stat"><span class="label">Fretes</span><b id="s-valor">R$ 0</b></div>
+        <div class="stat"><span class="label">Despesas</span><b id="s-desp">R$ 0</b></div>
+        <div class="stat liq"><span class="label">Líquido</span><b id="s-liq">R$ 0</b></div>
+      </div>
+    </section>
+    <section class="list" aria-label="Trechos">
+      <div class="list-head">
+        <h2 id="lista-titulo">Trechos do dia</h2>
+        <button type="button" class="link accent" id="btn-csv" hidden>Baixar planilha</button>
+      </div>
+      <div class="list" id="lista"></div>
+    </section>
+  </section>
+
+  <!-- BACKUP -->
+  <section class="view" id="v-backup" aria-label="Backup" hidden>
+    <div class="aviso" id="aviso-local" hidden>
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="5" y="1.5" width="10" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="10" cy="15.5" r="1" fill="currentColor"/></svg>
+      <p>Seus registros ficam salvos <b>neste celular</b>, neste navegador. Se limpar os dados do navegador ou trocar de aparelho, eles se perdem. Faça uma cópia toda semana.</p>
+    </div>
+    <section class="card backup" aria-labelledby="backup-titulo">
+      <h2 id="backup-titulo">Cópia de segurança</h2>
+      <p class="note">Baixe todos os registros para guardar ou para passar para outro celular. No aparelho novo, abra o mesmo link e carregue o arquivo aqui. Registros que já existem não são duplicados.</p>
+      <div class="actions stack">
+        <button type="button" class="btn primary big" id="btn-backup">Baixar todos os registros</button>
+        <label class="btn outline big" for="f-import" tabindex="0">Carregar planilha</label>
+        <input type="file" id="f-import" accept=".csv,text/csv,text/plain" hidden>
+      </div>
+      <details class="desp">
+        <summary>Ou colar os dados copiados</summary>
+        <div class="colar">
+          <textarea id="f-colar" rows="4" placeholder="Cole aqui o texto copiado pelo botão “Copiar”"></textarea>
+          <button type="button" class="btn plain" id="btn-colar">Importar texto colado</button>
+        </div>
+      </details>
+      <p class="msg" id="msg-backup" role="status"></p>
+    </section>
+  </section>
+
+  </div>
+</main>
+
+<nav class="tabbar gutter" aria-label="Telas">
+  <div class="col">
+    <button type="button" data-view="inicio" aria-current="page">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21 10.5 3M16 21 13.5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 6v2.5M12 11.5V14M12 17v2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Início<span class="badge" id="badge-rota" hidden></span>
+    </button>
+    <button type="button" data-view="historico">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Histórico
+    </button>
+    <button type="button" data-view="backup">
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18.5h10.5a4 4 0 0 0 .4-8 6 6 0 0 0-11.6 1.3A3.4 3.4 0 0 0 7 18.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v6M9.5 13.5 12 16l2.5-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Backup
+    </button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2,"0");
+  const hojeISO = () => { const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+  const agoraHM = () => { const d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); };
+  const num = v => { const s=String(v??"").replace(/\./g,"").replace(",",".").trim(); if(!s) return null; const n=Number(s); return isFinite(n)?n:NaN; };
+  const numDec = v => { const s=String(v??"").replace(",",".").trim(); if(!s) return null; const n=Number(s); return isFinite(n)&&n>=0?n:NaN; };
+  const fmtKm = n => n==null||isNaN(n) ? "—" : n.toLocaleString("pt-BR",{maximumFractionDigits:1});
+  const fmtData = iso => { const [y,m,d]=iso.split("-"); const dt=new Date(+y,+m-1,+d); return dt.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"}); };
+  const fmtMes = ym => { const [y,m]=ym.split("-"); return new Date(+y,+m-1,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"}); };
+  const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+  const mapsUrl = q => "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
+  const dirUrl = (a,b) => "https://www.google.com/maps/dir/?api=1"+(a?"&origin="+encodeURIComponent(a):"")+"&destination="+encodeURIComponent(b);
+  const fmtBRL = n => n==null||isNaN(n) ? "—" : n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  const brlIn = n => n==null ? "" : n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const DESP = [["pedagio","Pedágio"],["combustivel","Combustível"],["outros","Outros"]];
+  const despesas = t => DESP.reduce((s,[k])=>s+(t[k]||0),0);
+  const despInvalida = d => DESP.some(([k])=>isNaN(d[k]) || d[k]<0);
+  function despFormTotal(){
+    const tot = DESP.reduce((s,[k])=>{ const v=num($("f-"+k).value); return s+(v>0?v:0); },0);
+    $("desp-form-total").textContent = tot>0 ? "− "+fmtBRL(tot) : "";
+  }
+
+  // ---------- endereços das empresas ----------
+  let empresas = {};       // slug -> {nome, endereco, link}
+  let empStore = null;
+  const editandoLocal = {coleta:false, entrega:false};
+  const slug = s => String(s||"").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,150);
+  const empInfo = nome => nome ? (empresas[slug(nome)] || null) : null;
+  function lerEndereco(v){
+    v=String(v||"").trim(); if(!v) return null;
+    const m=v.match(/https?:\/\/\S+/);
+    if(m){ const resto=v.replace(m[0]," ").replace(/\s+/g," ").trim(); return {link:m[0], endereco: resto.length>3 ? resto : ""}; }
+    return {endereco:v.replace(/\s+/g," "), link:""};
+  }
+  const campoEmp = lado => $(lado==="coleta" ? "f-coleta-emp" : "f-entrega-emp");
+  function pendente(lado){
+    const box=$("loc-"+lado);
+    if(box.hidden || box.querySelector(".local-novo").hidden) return null;
+    return lerEndereco($("loc-"+lado+"-end").value);
+  }
+  // o que vai para o Google Maps como origem/destino: endereço salvo, senão o nome
+  function lugar(nome, lado){
+    const p = lado ? pendente(lado) : null;
+    if(p?.endereco) return p.endereco;
+    const e=empInfo(nome);
+    return e?.endereco || nome;
+  }
+  function localHref(nome){
+    const e=empInfo(nome);
+    if(e?.link) return e.link;
+    return mapsUrl(e?.endereco || nome);
+  }
+  function atualizaLocal(lado){
+    const inp=campoEmp(lado), box=$("loc-"+lado), nome=inp.value.trim();
+    box.hidden = !nome || inp.disabled;
+    if(box.hidden) return;
+    const e=empInfo(nome);
+    const ok=box.querySelector(".local-ok"), novo=box.querySelector(".local-novo");
+    const mostrarOk = !!e && !editandoLocal[lado];
+    ok.hidden=!mostrarOk; novo.hidden=mostrarOk;
+    if(mostrarOk){ const a=ok.querySelector("a"); a.textContent=e.endereco||"Local salvo no Maps"; a.href=localHref(nome); a.title="Abrir "+e.nome+" no Google Maps"; }
+    else { novo.querySelector(".local-buscar").href=mapsUrl(nome); }
+  }
+  async function salvarEmpresa(lado){
+    const nome=campoEmp(lado).value.trim(), p=pendente(lado);
+    if(!nome || !p) return;
+    const id=slug(nome); if(!id) return;
+    const doc={nome, endereco:p.endereco, link:p.link, atualizadoEm:new Date().toISOString()};
+    empresas[id]=doc;
+    editandoLocal[lado]=false; $("loc-"+lado+"-end").value="";
+    atualizaLinks();
+    try{ await empStore?.put(id,doc); }catch(e){ setMsg("Não foi possível guardar o endereço de "+nome+".",true); }
+  }
+  ["coleta","entrega"].forEach(lado=>{
+    const box=$("loc-"+lado);
+    $("loc-"+lado+"-end").addEventListener("change",()=>salvarEmpresa(lado));
+    $("loc-"+lado+"-end").addEventListener("input",atualizaLinks);
+    box.querySelector(".local-alt").addEventListener("click",()=>{
+      const e=empInfo(campoEmp(lado).value.trim());
+      editandoLocal[lado]=true; atualizaLocal(lado);
+      const inp=$("loc-"+lado+"-end"); inp.value = e ? [e.endereco,e.link].filter(Boolean).join(" ") : ""; inp.focus();
+    });
+    campoEmp(lado).addEventListener("input",()=>{ editandoLocal[lado]=false; });
+  });
+
+  function atualizaLinks(){
+    atualizaLocal("coleta"); atualizaLocal("entrega");
+    const so=$("so-entrega").checked;
+    const orig= so ? "" : $("f-coleta-emp").value.trim(), dest=$("f-entrega-emp").value.trim();
+    const ar=$("map-rota"); ar.hidden=!dest || (!so && !orig); if(!ar.hidden) ar.href=dirUrl(orig?lugar(orig,"coleta"):"",lugar(dest,"entrega"));
+    const vSug = valorConhecido(orig,dest);
+    $("f-valor").placeholder = vSug!=null ? "última vez: "+fmtBRL(vSug) : "opcional";
+    const conhecida = rotaConhecida(orig,dest);
+    const campo=$("f-km-rota"), hint=$("rota-hint");
+    if(conhecida!=null){
+      if(!campo.value || campo.dataset.auto==="1"){ campo.value=String(conhecida).replace(".",","); campo.dataset.auto="1"; }
+      hint.textContent="Preenchido com o km da última vez que fez essa rota ("+fmtKm(conhecida)+" km).";
+    } else {
+      if(campo.dataset.auto==="1"){ campo.value=""; campo.dataset.auto=""; }
+      hint.textContent = (dest && (so||orig)) ? "Rota nova: abra no Maps e copie a distância." : "";
+    }
+    // resumo da partida rápida + link de navegação
+    const pronto = !!dest && (so || !!orig);
+    const bp=$("btn-partida");
+    bp.href = pronto ? dirUrl(orig?lugar(orig,"coleta"):"",lugar(dest,"entrega"))+"&travelmode=driving&dir_action=navigate" : "#";
+    bp.setAttribute("aria-disabled", pronto ? "false" : "true");
+    $("pr-hora").textContent = agoraHM();
+    $("pr-km").textContent = conhecida!=null ? fmtKm(conhecida)+" km" : "—";
+    $("pr-nota").textContent = !pronto ? (so ? "Preencha o destino." : "Preencha a coleta e o destino.")
+      : conhecida!=null ? "Você já fez essa rota: km preenchido sozinho."
+      : "Rota nova: o km fica para informar na chegada.";
+  }
+  setInterval(()=>{ const h=$("pr-hora"); if(h) h.textContent=agoraHM(); }, 20000);
+  const norm = s => String(s||"").trim().toLowerCase().replace(/\s+/g," ");
+  function rotaConhecida(orig,dest){
+    if(!orig || !dest) return null;
+    const o=norm(orig), d=norm(dest);
+    const iguais = trips.filter(t=>t.tipo!=="so_entrega" && norm(t.coletaEmpresa)===o && norm(t.entregaEmpresa)===d && kmTrecho(t)!=null)
+      .sort((a,b)=>(b.data+(b.entregaHora||"")).localeCompare(a.data+(a.entregaHora||"")));
+    return iguais.length ? kmTrecho(iguais[0]) : null;
+  }
+  function valorConhecido(orig,dest){
+    if(!dest) return null;
+    const o=norm(orig), d=norm(dest);
+    const iguais = trips.filter(t=>norm(t.coletaEmpresa)===o && norm(t.entregaEmpresa)===d && t.valor!=null)
+      .sort((a,b)=>(b.data+(b.entregaHora||"")).localeCompare(a.data+(a.entregaHora||"")));
+    return iguais.length ? iguais[0].valor : null;
+  }
+
+  let trips = [];          // {id, ...campos}
+  const rascunhos = {};    // valores digitados no cartão "Em rota", preservados entre renders
+  let modo = "dia";
+  let editId = null;
+  let confirmDel = null;
+  let store = null;        // db collection ou fallback local
+  let downloads = null;
+
+  // ---------- armazenamento ----------
+  const LKEY = "diario-fretes-local";
+  const local = {
+    load(){ try{ return JSON.parse(localStorage.getItem(LKEY)||"[]"); }catch(e){ return []; } },
+    save(list){ try{ localStorage.setItem(LKEY, JSON.stringify(list)); }catch(e){} },
+  };
+  function useLocal(){
+    trips = local.load(); $("aviso-local").hidden = false;
+    const EKEY="diario-fretes-empresas";
+    try{ empresas = JSON.parse(localStorage.getItem(EKEY)||"{}"); }catch(e){ empresas={}; }
+    empStore = { async put(){ try{ localStorage.setItem(EKEY, JSON.stringify(empresas)); }catch(e){} } };
+    store = {
+      async put(id,data){ const i=trips.findIndex(t=>t.id===id); const row={id,...data}; if(i>=0) trips[i]=row; else trips.push(row); local.save(trips); render(); },
+      async del(id){ trips=trips.filter(t=>t.id!==id); local.save(trips); render(); }
+    };
+    render();
+  }
+
+  async function init(){
+    $("filtro-data").value = hojeISO();
+    $("filtro-mes").value = hojeISO().slice(0,7);
+    novoForm();
+    render();
+    let db = null;
+    try { db = window.claude && await window.claude.use("db"); } catch(e){ db=null; }
+    try { downloads = window.claude && await window.claude.use("downloads"); } catch(e){ downloads=null; }
+    // Só o dono (ou quem edita o app) usa o armazenamento da conta.
+    // Qualquer outra pessoa — por exemplo um motorista com o link — guarda tudo no próprio celular.
+    let nuvem=false;
+    try{
+      const user = window.claude && await window.claude.use("user");
+      if(user) nuvem = (await user.isOwner()) || (await user.canEdit());
+    }catch(e){ nuvem=false; }
+    if(!db || !nuvem){ useLocal(); return; }
+    const col = db.collection("viagens");
+    store = {
+      async put(id,data){ await col.doc(id).set(data); },
+      async del(id){ await col.doc(id).delete(); }
+    };
+    col.onSnapshot(snap => {
+      trips = snap.docs.filter(d=>d.exists).map(d=>({id:d.id,...d.data()}));
+      render();
+    }, err => { setMsg("Não foi possível carregar os dados ("+err.code+"). Recarregue a página.", true); });
+    const ecol = db.collection("empresas");
+    empStore = { async put(id,data){ await ecol.doc(id).set(data); } };
+    ecol.onSnapshot(snap => {
+      const m={}; snap.docs.forEach(d=>{ if(d.exists) m[d.id]=d.data(); });
+      empresas=m; render();
+    }, ()=>{});
+  }
+
+  // ---------- formulário ----------
+  function ultimoKm(){
+    const comKm = trips.filter(t=>t.kmChegada!=null).sort((a,b)=>(a.data+(a.entregaHora||"")).localeCompare(b.data+(b.entregaHora||"")));
+    return comKm.length ? comKm[comKm.length-1].kmChegada : null;
+  }
+  function novoForm(){
+    editId=null;
+    $("form").reset();
+    $("f-data").value = modo==="dia" ? $("filtro-data").value : hojeISO();
+    const uk = ultimoKm(); if(uk!=null) $("f-km-saida").value = uk;
+    $("form-title").textContent="Nova partida"; $("btn-salvar").textContent="Salvar trecho completo"; $("btn-cancelar").hidden=true;
+    $("btn-partida").hidden=false; $("nota-form").hidden=false; $("btn-modo").hidden=false; setRapido(true);
+    $("f-km-rota").dataset.auto="";
+    editandoLocal.coleta=false; editandoLocal.entrega=false;
+    $("desp-form").open=false; despFormTotal();
+    aplicaSoEntrega(); kmPreview();
+  }
+  function carregaForm(t){
+    editId=t.id;
+    $("f-data").value=t.data||hojeISO();
+    $("so-entrega").checked = t.tipo==="so_entrega";
+    $("f-coleta-emp").value=t.coletaEmpresa||""; $("f-coleta-hora").value=t.coletaHora||"";
+    $("f-km-saida").value = t.kmSaida??"";
+    $("f-entrega-emp").value=t.entregaEmpresa||""; $("f-entrega-hora").value=t.entregaHora||"";
+    $("f-km-chegada").value = t.kmChegada??""; $("f-obs").value=t.obs||"";
+    $("f-valor").value = brlIn(t.valor);
+    $("f-pedagio").value = brlIn(t.pedagio); $("f-combustivel").value = brlIn(t.combustivel); $("f-outros").value = brlIn(t.outros);
+    $("desp-form").open = despesas(t)>0; despFormTotal();
+    editandoLocal.coleta=false; editandoLocal.entrega=false;
+    $("f-km-rota").value = t.kmRota!=null ? String(t.kmRota).replace(".",",") : ""; $("f-km-rota").dataset.auto="";
+    $("form-title").textContent="Editar trecho"; $("btn-salvar").textContent="Salvar alterações"; $("btn-cancelar").hidden=false;
+    $("btn-partida").hidden=true; $("nota-form").hidden=true; $("btn-modo").hidden=true; setRapido(false);
+    aplicaSoEntrega(); kmPreview(); setMsg("");
+    setView("inicio");
+    requestAnimationFrame(()=>$("form").scrollIntoView({block:"start"}));
+  }
+  function aplicaSoEntrega(){
+    const so=$("so-entrega").checked;
+    $("f-coleta-emp").disabled=so; $("f-coleta-hora").disabled=so;
+    $("f-coleta-emp").placeholder = so ? "Material já está no caminhão" : "Onde retira o material";
+    $("leg-coleta").style.opacity = so ? .55 : 1;
+    atualizaLinks();
+  }
+  function kmPreview(){
+    const a=num($("f-km-saida").value), b=num($("f-km-chegada").value);
+    $("km-preview").textContent = (a!=null&&b!=null&&!isNaN(a)&&!isNaN(b)&&b>=a) ? "Trecho: "+fmtKm(b-a)+" km" : "";
+  }
+  let toastTimer=null;
+  function setMsg(t,err){
+    const el=$("toast"); clearTimeout(toastTimer);
+    if(!t){ el.classList.remove("on"); return; }
+    el.textContent=t; el.classList.toggle("err",!!err); el.classList.add("on");
+    toastTimer=setTimeout(()=>el.classList.remove("on"), err?5000:3500);
+  }
+
+  // ---------- telas ----------
+  let viewAtual="inicio";
+  function setView(v){
+    viewAtual=v;
+    ["inicio","historico","backup"].forEach(n=>{ $("v-"+n).hidden = n!==v; });
+    document.querySelectorAll(".tabbar [data-view]").forEach(b=>{ if(b.dataset.view===v) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
+    window.scrollTo(0,0);
+    try{ sessionStorage.setItem("diario-view",v); }catch(e){}
+  }
+  document.querySelectorAll(".tabbar [data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+
+  function lerForm(){
+    const so=$("so-entrega").checked;
+    return {
+      tipo: so ? "so_entrega" : "coleta_entrega",
+      data: $("f-data").value,
+      coletaEmpresa: so ? "" : $("f-coleta-emp").value.trim(),
+      coletaHora: so ? "" : $("f-coleta-hora").value,
+      kmSaida: num($("f-km-saida").value),
+      entregaEmpresa: $("f-entrega-emp").value.trim(),
+      entregaHora: $("f-entrega-hora").value,
+      kmChegada: num($("f-km-chegada").value),
+      kmRota: numDec($("f-km-rota").value),
+      valor: num($("f-valor").value),
+      pedagio: num($("f-pedagio").value),
+      combustivel: num($("f-combustivel").value),
+      outros: num($("f-outros").value),
+      obs: $("f-obs").value.trim(),
+    };
+  }
+  const novoId = () => "v"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+  $("btn-partida").addEventListener("click", async e=>{
+    const d=lerForm();
+    const so=d.tipo==="so_entrega";
+    const erro = (!so && !d.coletaEmpresa) ? "Informe a empresa da coleta, ou marque “Só entrega”."
+      : !d.entregaEmpresa ? "Informe a empresa de destino."
+      : isNaN(d.kmSaida) ? "Km na saída deve ser só número, por exemplo 125430."
+      : isNaN(d.kmRota) ? "Km do trecho deve ser um número, por exemplo 23,5."
+      : (isNaN(d.valor)||d.valor<0) ? "Valor deve ser um número, por exemplo 150,00."
+      : despInvalida(d) ? "Despesas devem ser números, por exemplo 12,40." : "";
+    if(erro){ e.preventDefault(); return setMsg(erro,true); }
+    salvarEmpresa("coleta"); salvarEmpresa("entrega");
+    // o link segue abrindo o Maps; o registro é salvo em paralelo
+    d.data = hojeISO();
+    d.partidaHora = agoraHM();
+    if(!so) d.coletaHora = d.coletaHora || d.partidaHora;
+    d.entregaHora=""; d.kmChegada=null;
+    d.criadoEm=new Date().toISOString();
+    if(salvandoPartida) return; salvandoPartida=true;
+    try{
+      await store.put(novoId(),d);
+      $("filtro-data").value=d.data;
+      novoForm(); setMsg("Partida registrada às "+d.partidaHora+". Boa viagem!");
+      render();
+      window.scrollTo(0,0);
+    }catch(err){
+      setMsg(err?.code==="invalid_argument" ? "Você só tem acesso de leitura a este diário." : "Não foi possível registrar. Tente de novo.", true);
+    }finally{ salvandoPartida=false; }
+  });
+  let salvandoPartida=false;
+
+  function setRapido(on){
+    $("form").classList.toggle("rapido",on);
+    $("btn-modo").textContent = on ? "Lançar trecho já feito" : "Voltar para partida rápida";
+    if(!editId) $("form-title").textContent = on ? "Nova partida" : "Lançar trecho";
+  }
+  $("btn-modo").addEventListener("click",()=>setRapido(!$("form").classList.contains("rapido")));
+
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const so=$("so-entrega").checked;
+    const d=lerForm();
+    if(!d.data) return setMsg("Escolha o dia.",true);
+    if(isNaN(d.kmRota)) return setMsg("Km do trecho deve ser um número, por exemplo 23,5.",true);
+    if(isNaN(d.valor)||d.valor<0) return setMsg("Valor deve ser um número, por exemplo 150,00.",true);
+    if(despInvalida(d)) return setMsg("Despesas devem ser números, por exemplo 12,40.",true);
+    salvarEmpresa("coleta"); salvarEmpresa("entrega");
+    if(!so && !d.coletaEmpresa) return setMsg("Informe a empresa da coleta, ou marque “Só entrega”.",true);
+    if(so && !d.entregaEmpresa) return setMsg("Informe a empresa da entrega.",true);
+    if(isNaN(d.kmSaida)||isNaN(d.kmChegada)) return setMsg("Km deve ser só número, por exemplo 125430.",true);
+    if(d.kmSaida!=null && d.kmChegada!=null && d.kmChegada<d.kmSaida) return setMsg("Km na chegada está menor que o km na saída.",true);
+    const old = editId ? trips.find(t=>t.id===editId) : null;
+    d.criadoEm = old?.criadoEm || new Date().toISOString();
+    d.partidaHora = old?.partidaHora || "";
+    const id = editId || novoId();
+    $("btn-salvar").disabled=true;
+    try{
+      await store.put(id,d);
+      const msg = editId ? "Alterações salvas." : "Trecho salvo.";
+      if(modo==="dia" && d.data!==$("filtro-data").value){ $("filtro-data").value=d.data; }
+      novoForm(); setMsg(msg);
+      render();
+    }catch(err){
+      setMsg(err?.code==="invalid_argument" ? "Você só tem acesso de leitura a este diário." : "Não foi possível salvar. Tente de novo.", true);
+    }finally{ $("btn-salvar").disabled=false; }
+  });
+  $("btn-cancelar").addEventListener("click",()=>{ novoForm(); setMsg(""); });
+  $("so-entrega").addEventListener("change",aplicaSoEntrega);
+  ["f-km-saida","f-km-chegada"].forEach(i=>$(i).addEventListener("input",kmPreview));
+  ["f-coleta-emp","f-entrega-emp"].forEach(i=>$(i).addEventListener("input",atualizaLinks));
+  DESP.forEach(([k])=>$("f-"+k).addEventListener("input",despFormTotal));
+  $("f-km-rota").addEventListener("input",()=>{ $("f-km-rota").dataset.auto=""; $("rota-hint").textContent=""; });
+  document.querySelectorAll("[data-agora]").forEach(b=>b.addEventListener("click",()=>{ $(b.dataset.agora).value=agoraHM(); }));
+
+  // ---------- filtros ----------
+  function setModo(m){
+    modo=m;
+    $("tab-dia").setAttribute("aria-pressed",m==="dia"); $("tab-mes").setAttribute("aria-pressed",m==="mes");
+    $("filtro-data").hidden = m!=="dia"; $("filtro-mes").hidden = m!=="mes";
+    $("periodo-label").textContent = m==="dia" ? "Dia" : "Mês";
+    render();
+  }
+  $("tab-dia").addEventListener("click",()=>setModo("dia"));
+  $("tab-mes").addEventListener("click",()=>setModo("mes"));
+  $("filtro-data").addEventListener("change",()=>{ if(!editId) $("f-data").value=$("filtro-data").value; render(); });
+  $("filtro-mes").addEventListener("change",render);
+  $("btn-hoje").addEventListener("click",()=>{ $("filtro-data").value=hojeISO(); $("filtro-mes").value=hojeISO().slice(0,7); render(); });
+
+  // ---------- render ----------
+  const kmTrecho = t => (t.kmSaida!=null && t.kmChegada!=null) ? t.kmChegada-t.kmSaida : (t.kmRota!=null ? t.kmRota : null);
+  const ordem = (a,b) => (a.data+(a.coletaHora||a.entregaHora||"99")).localeCompare(b.data+(b.coletaHora||b.entregaHora||"99")) || (a.criadoEm||"").localeCompare(b.criadoEm||"");
+
+  function visiveis(){
+    if(modo==="dia"){ const d=$("filtro-data").value; return trips.filter(t=>t.data===d).sort(ordem); }
+    const m=$("filtro-mes").value; return trips.filter(t=>(t.data||"").startsWith(m)).sort(ordem);
+  }
+
+  function renderRota(){
+    const abertos = trips.filter(t=>!t.entregaHora).sort(ordem);
+    const box=$("em-rota");
+    box.hidden = !abertos.length;
+    if(!abertos.length){ box.innerHTML=""; return; }
+    box.innerHTML = abertos.map(t=>{
+      const origem = t.tipo==="so_entrega" ? "" : t.coletaEmpresa;
+      const r = rascunhos[t.id]||{};
+      const kmSug = t.kmRota ?? rotaConhecida(origem, t.entregaEmpresa);
+      const saida = t.partidaHora || t.coletaHora || "--:--";
+      const dia = t.data===hojeISO() ? "" : " · "+fmtData(t.data);
+      const nav = t.entregaEmpresa ? dirUrl(origem?lugar(origem):"",lugar(t.entregaEmpresa))+"&travelmode=driving&dir_action=navigate" : "";
+      return `<div class="rota-card" data-rota="${esc(t.id)}">
+        <div class="rota-top">
+          <span class="pulse">Em rota</span>
+          <span class="note mono" data-desde="${esc(t.criadoEm||"")}">${esc(decorrido(t.criadoEm))}</span>
+        </div>
+        <div>
+          <p class="rota-from">${origem?"Saiu de "+esc(origem):"Material já estava no caminhão"}</p>
+          <p class="rota-to"><small>Destino</small>${t.entregaEmpresa?esc(t.entregaEmpresa):"a definir"}</p>
+        </div>
+        <div class="rota-meta">
+          <div><span class="label">Partida</span><b>${esc(saida)}${esc(dia)}</b></div>
+          <div><span class="label">Km previsto</span><b>${kmSug!=null?esc(fmtKm(kmSug))+" km":"—"}</b></div>
+          ${t.valor!=null?`<div><span class="label">Frete</span><b>${esc(fmtBRL(t.valor))}</b></div>`:""}
+        </div>
+        ${nav?`<a class="btn outline" href="${esc(nav)}" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5 17.5 18 10 14.2 2.5 18z" fill="currentColor"/></svg>Abrir navegação</a>`:""}
+        <div class="rota-form">
+          <div class="field full"><label for="re-${esc(t.id)}">Empresa da entrega</label><input id="re-${esc(t.id)}" data-r="emp" list="empresas" autocomplete="off" value="${esc(r.emp ?? t.entregaEmpresa ?? "")}"></div>
+          <div class="field"><label for="rt-${esc(t.id)}">Km do trecho</label><input id="rt-${esc(t.id)}" data-r="rota" class="num" inputmode="decimal" placeholder="pelo Maps" value="${esc(r.rota ?? (kmSug!=null?String(kmSug).replace(".",","):""))}"></div>
+          <div class="field"><label for="rk-${esc(t.id)}">ou km do painel</label><input id="rk-${esc(t.id)}" data-r="km" class="num" inputmode="numeric" placeholder="${t.kmSaida!=null?esc(fmtKm(t.kmSaida))+" na saída":"opcional"}" value="${esc(r.km ?? "")}"></div>
+        </div>
+        <details class="desp" data-desp="${esc(t.id)}"${(r.despOpen ?? despesas(t)>0) ? " open" : ""}>
+          <summary>Despesas do trecho <span class="note">(opcional)</span></summary>
+          <div class="desp-grid">
+            ${DESP.map(([k,rot])=>`<div class="field"><label for="r${k}-${esc(t.id)}">${rot} (R$)</label><input id="r${k}-${esc(t.id)}" data-r="${k}" class="num" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(r[k] ?? brlIn(t[k]))}"></div>`).join("")}
+          </div>
+        </details>
+        <span class="msg err" data-rmsg="${esc(t.id)}"></span>
+        <button type="button" class="btn primary big" data-chegada="${esc(t.id)}"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10.5 8.2 14.5 16 5.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Cheguei: registrar chegada</button>
+      </div>`;
+    }).join("");
+  }
+
+  function decorrido(iso){
+    const t=Date.parse(iso||""); if(!t) return "";
+    const min=Math.max(0,Math.round((Date.now()-t)/60000));
+    if(min<1) return "agora há pouco";
+    if(min<60) return "há "+min+" min";
+    const h=Math.floor(min/60), m=min%60;
+    return "há "+h+"h"+(m?pad(m):"");
+  }
+  setInterval(()=>document.querySelectorAll("[data-desde]").forEach(el=>{ el.textContent=decorrido(el.dataset.desde); }), 30000);
+
+  $("em-rota").addEventListener("input", e=>{
+    const card=e.target.closest("[data-rota]"); if(!card||!e.target.dataset.r) return;
+    (rascunhos[card.dataset.rota] ||= {})[e.target.dataset.r]=e.target.value;
+  });
+  $("em-rota").addEventListener("toggle", e=>{
+    const d=e.target.closest?.("[data-desp]"); if(!d) return;
+    (rascunhos[d.dataset.desp] ||= {}).despOpen = d.open;
+  }, true);
+  $("em-rota").addEventListener("click", async e=>{
+    const b=e.target.closest("[data-chegada]"); if(!b) return;
+    const id=b.dataset.chegada, t=trips.find(x=>x.id===id); if(!t) return;
+    const card=b.closest("[data-rota]"), m=card.querySelector("[data-rmsg]");
+    const emp=card.querySelector('[data-r="emp"]').value.trim();
+    const km=num(card.querySelector('[data-r="km"]').value);
+    const kmR=numDec(card.querySelector('[data-r="rota"]').value);
+    if(!emp){ m.textContent="Informe a empresa da entrega."; return; }
+    if(isNaN(km)||isNaN(kmR)){ m.textContent="Km deve ser só número, por exemplo 23,5."; return; }
+    if(km==null && kmR==null){ m.textContent="Informe o km do trecho (pelo Maps) ou o km do painel."; return; }
+    if(km!=null && t.kmSaida!=null && km<t.kmSaida){ m.textContent="Km do painel está menor que o da saída ("+fmtKm(t.kmSaida)+")."; return; }
+    const gastos={}; DESP.forEach(([k])=>{ gastos[k]=num(card.querySelector(`[data-r="${k}"]`).value); });
+    if(despInvalida(gastos)){ m.textContent="Despesas devem ser números, por exemplo 12,40."; return; }
+    const {id:_, ...resto}=t;
+    const d={...resto, ...gastos, entregaEmpresa:emp, entregaHora:agoraHM(), kmChegada:km, kmRota:kmR};
+    if(d.kmChegada==null && d.kmSaida!=null && kmR!=null) d.kmChegada = Math.round((d.kmSaida+kmR)*10)/10; // mantém o odômetro estimado
+    b.disabled=true;
+    try{
+      await store.put(id,d);
+      delete rascunhos[id];
+      const rodado = kmTrecho(d);
+      const rod = rodado!=null ? " · "+fmtKm(rodado)+" km rodados" : "";
+      setMsg("Chegada registrada às "+d.entregaHora+rod+".");
+      novoForm(); render();
+    }catch(err){ m.textContent = err?.code==="invalid_argument" ? "Você só tem acesso de leitura a este diário." : "Não foi possível registrar. Tente de novo."; b.disabled=false; }
+  });
+
+  // nome da empresa como link para o local no Maps
+  const empLink = nome => {
+    const e=empInfo(nome);
+    const dica = e?.endereco ? ` title="${esc(e.endereco)}"` : "";
+    return `<a class="emp-link" href="${esc(localHref(nome))}" target="_blank" rel="noopener"${dica}>${esc(nome)}</a>`;
+  };
+
+  function custosHtml(t){
+    const dsp=despesas(t);
+    if(t.valor==null && !dsp) return "";
+    const partes=[];
+    if(t.valor!=null) partes.push(`<span class="c-frete">Frete ${esc(fmtBRL(t.valor))}</span>`);
+    DESP.forEach(([k,rot])=>{ if(t[k]) partes.push(`<span class="c-desp">${rot} −${esc(fmtBRL(t[k]))}</span>`); });
+    if(t.valor!=null && dsp){ const l=t.valor-dsp; partes.push(`<span class="c-liq${l<0?" neg":""}">Líquido ${esc(fmtBRL(l))}</span>`); }
+    return `<div class="custos">${partes.join("")}</div>`;
+  }
+
+  function render(){
+    renderRota();
+    atualizaLinks();
+    const deHoje=trips.filter(t=>t.data===hojeISO());
+    $("h-trechos").textContent = deHoje.length;
+    $("h-km").textContent = fmtKm(deHoje.reduce((s,t)=>s+(kmTrecho(t)||0),0));
+    $("h-liq").textContent = fmtBRL(deHoje.reduce((s,t)=>s+(t.valor||0)-despesas(t),0));
+    $("badge-rota").hidden = !trips.some(t=>!t.entregaHora);
+    $("hoje-label").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"});
+    // empresas p/ autocompletar
+    const vistos=new Map();
+    [...Object.values(empresas).map(e=>e.nome), ...trips.flatMap(t=>[t.coletaEmpresa,t.entregaEmpresa])].filter(Boolean).forEach(n=>{ const k=slug(n); if(!vistos.has(k)) vistos.set(k,n); });
+    const emps=[...vistos.values()].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    $("empresas").innerHTML = emps.map(e=>`<option value="${esc(e)}">`).join("");
+
+    const list=visiveis();
+    const km = list.reduce((s,t)=>s+(kmTrecho(t)||0),0);
+    $("s-trechos").textContent=list.length;
+    $("s-km").textContent=fmtKm(km);
+    const totFrete=list.reduce((s,t)=>s+(t.valor||0),0), totDesp=list.reduce((s,t)=>s+despesas(t),0);
+    $("s-valor").textContent=fmtBRL(totFrete);
+    $("s-desp").textContent=fmtBRL(totDesp);
+    $("s-liq").textContent=fmtBRL(totFrete-totDesp);
+    if(modo==="dia"){
+      $("s-l3").textContent="1ª coleta"; $("s-l4").textContent="Última entrega";
+      const hs=list.map(t=>t.coletaHora||t.partidaHora||t.entregaHora).filter(Boolean).sort();
+      const he=list.map(t=>t.entregaHora).filter(Boolean).sort();
+      $("s-3").textContent=hs[0]||"--:--"; $("s-4").textContent=he[he.length-1]||"--:--";
+      $("lista-titulo").textContent="Trechos de "+fmtData($("filtro-data").value);
+    } else {
+      const dias=new Set(list.map(t=>t.data)).size;
+      $("s-l3").textContent="Dias rodados"; $("s-l4").textContent="Km por dia";
+      $("s-3").textContent=dias; $("s-4").textContent= dias? fmtKm(Math.round(km/dias)) : "—";
+      $("lista-titulo").textContent="Trechos de "+fmtMes($("filtro-mes").value);
+    }
+    $("btn-csv").hidden = !list.length;
+    const baixa = !!downloads || !window.claude;
+    $("btn-csv").textContent = baixa ? "Baixar planilha" : "Copiar dados";
+    $("btn-backup").textContent = baixa ? "Baixar todos os registros" : "Copiar todos os registros";
+
+    const box=$("lista");
+    if(!list.length){
+      box.innerHTML=`<div class="empty">Nenhum trecho ${modo==="dia"?"neste dia":"neste mês"}.<br>Os trechos aparecem aqui depois de registrados no <b>Início</b>.</div>`;
+      return;
+    }
+    let html="", diaAtual=null;
+    list.forEach(t=>{
+      if(modo==="mes" && t.data!==diaAtual){
+        diaAtual=t.data;
+        const doDia=list.filter(x=>x.data===diaAtual);
+        const kmDia=doDia.reduce((s,x)=>s+(kmTrecho(x)||0),0);
+        const vDia=doDia.reduce((s,x)=>s+(x.valor||0),0), dDia=doDia.reduce((s,x)=>s+despesas(x),0);
+        const dinheiro = (vDia||dDia) ? " · líquido "+fmtBRL(vDia-dDia) : "";
+        html+=`<div class="day-head"><h3>${esc(fmtData(diaAtual))}</h3><span>${doDia.length} trecho${doDia.length>1?"s":""} · ${fmtKm(kmDia)} km${esc(dinheiro)}</span></div>`;
+      }
+      const k=kmTrecho(t);
+      const aberto = !t.entregaEmpresa || !t.entregaHora;
+      const coleta = t.tipo==="so_entrega"
+        ? `<span class="t">${esc(t.partidaHora||"—")}</span><span class="e" style="color:var(--muted);font-weight:500">Material já no caminhão</span><span class="k">${t.partidaHora?"partida":"sem coleta"}</span>`
+        : `<span class="t">${esc(t.coletaHora||"--:--")}</span><span class="e">${empLink(t.coletaEmpresa)}</span><span class="k">coleta</span>`;
+      html+=`<article class="trip">
+        <div class="route">
+          ${coleta}
+          <span class="arrow"></span>
+          <span class="t">${esc(t.entregaHora||"--:--")}</span><span class="e">${t.entregaEmpresa?empLink(t.entregaEmpresa):'<span style="color:var(--muted);font-weight:500">Entrega a definir</span>'}</span><span class="k">entrega</span>
+        </div>
+        <div class="km"><b>${k!=null?fmtKm(k):"—"}</b><small>km</small><br><small>${(t.kmSaida!=null||t.kmChegada!=null)?(t.kmSaida!=null?fmtKm(t.kmSaida):"?")+" → "+(t.kmChegada!=null?fmtKm(t.kmChegada):"?"):(t.kmRota!=null?"pelo Maps":"")}</small></div>
+        ${custosHtml(t)}
+        <div class="trip-foot">
+          ${!t.entregaHora?'<span class="pill open">Em rota</span>':(aberto?'<span class="pill open">Incompleto</span>':'<span class="pill done">Entregue</span>')}
+          <span class="obs">${esc(t.obs||"")}</span>
+          ${t.entregaEmpresa?`<a class="link" href="${esc(dirUrl(t.tipo==="so_entrega"||!t.coletaEmpresa?"":lugar(t.coletaEmpresa),lugar(t.entregaEmpresa)))}" target="_blank" rel="noopener">Rota no Maps ↗</a>`:""}
+          <button type="button" class="link" data-edit="${esc(t.id)}">Editar</button>
+          ${confirmDel===t.id
+            ? `<button type="button" class="link del" data-del-ok="${esc(t.id)}">Confirmar exclusão</button><button type="button" class="link" data-del-no="1">Não</button>`
+            : `<button type="button" class="link del" data-del="${esc(t.id)}">Excluir</button>`}
+        </div>
+      </article>`;
+    });
+    box.innerHTML=html;
+  }
+
+  $("lista").addEventListener("click", async e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    if(b.dataset.edit){ const t=trips.find(x=>x.id===b.dataset.edit); if(t) carregaForm(t); }
+    else if(b.dataset.del){ confirmDel=b.dataset.del; render(); }
+    else if(b.dataset.delNo){ confirmDel=null; render(); }
+    else if(b.dataset.delOk){
+      const id=b.dataset.delOk; confirmDel=null;
+      try{ await store.del(id); if(editId===id) novoForm(); }catch(err){ setMsg("Não foi possível excluir.",true); }
+      render();
+    }
+  });
+
+  // ---------- CSV: exportar ----------
+  const COLS=["Data","Tipo","Empresa coleta","Horário coleta","Horário partida","Empresa entrega","Horário entrega","Km saída","Km chegada","Km rodado","Km do trecho (Maps)","Valor (R$)","Pedágio (R$)","Combustível (R$)","Outros (R$)","Despesas (R$)","Líquido (R$)","Observação","Endereço coleta","Endereço entrega","ID"];
+  function gerarCSV(list){
+    const q=v=>{ const s=String(v??""); return /[;"\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+    const brl = v => v==null ? "" : v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+    const kmS = v => v==null ? "" : String(Math.round(v*10)/10).replace(".",",");
+    const endOf = n => { const e=empInfo(n); return e ? [e.endereco,e.link].filter(Boolean).join(" ") : ""; };
+    const linhas=[COLS.join(";")];
+    list.forEach(t=>{
+      const [y,m,d]=(t.data||"").split("-");
+      linhas.push([d+"/"+m+"/"+y, t.tipo==="so_entrega"?"Só entrega":"Coleta e entrega", t.coletaEmpresa, t.coletaHora, t.partidaHora||"", t.entregaEmpresa, t.entregaHora,
+        kmS(t.kmSaida), kmS(t.kmChegada), kmS(kmTrecho(t)), kmS(t.kmRota), brl(t.valor), brl(t.pedagio), brl(t.combustivel), brl(t.outros),
+        despesas(t) ? brl(despesas(t)) : "", (t.valor!=null||despesas(t)) ? brl((t.valor||0)-despesas(t)) : "", t.obs, endOf(t.coletaEmpresa), endOf(t.entregaEmpresa), t.id].map(q).join(";"));
+    });
+    return linhas.join("\r\n");
+  }
+  async function entregarTexto(nome, texto, avisar){
+    if(downloads){
+      try{ await downloads.save({filename:nome, data:"﻿"+texto}); }catch(err){}
+      return;
+    }
+    if(!window.claude){ // versão publicada fora do Claude: download direto pelo navegador
+      try{
+        const url=URL.createObjectURL(new Blob(["\ufeff"+texto],{type:"text/csv;charset=utf-8"}));
+        const a=document.createElement("a"); a.href=url; a.download=nome; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),4000);
+        avisar("Planilha baixada: "+nome); return;
+      }catch(err){}
+    }
+    try{ await navigator.clipboard.writeText(texto); avisar("Dados copiados. Cole no WhatsApp ou num e-mail para guardar uma cópia."); }
+    catch(err){ avisar("Não foi possível copiar neste aparelho.",true); }
+  }
+  $("btn-csv").addEventListener("click", ()=>{
+    const nome = "fretes-"+(modo==="dia"?$("filtro-data").value:$("filtro-mes").value)+".csv";
+    entregarTexto(nome, gerarCSV(visiveis()), setMsg);
+  });
+  function msgBackup(t,err){ const m=$("msg-backup"); m.textContent=t; m.className="msg"+(t?(err?" err":" ok"):""); }
+  $("btn-backup").addEventListener("click", ()=>{
+    if(!trips.length) return msgBackup("Ainda não há registros para guardar.",true);
+    entregarTexto("fretes-backup-"+hojeISO()+".csv", gerarCSV([...trips].sort(ordem)), msgBackup);
+  });
+
+  // ---------- CSV: importar ----------
+  function lerCSV(texto){
+    texto=String(texto||"").replace(/^﻿/,"");
+    const sep = (texto.split(/\r?\n/)[0].match(/;/g)||[]).length >= (texto.split(/\r?\n/)[0].match(/,/g)||[]).length ? ";" : ",";
+    const linhas=[]; let campo="", linha=[], aspas=false;
+    for(let i=0;i<texto.length;i++){
+      const c=texto[i];
+      if(aspas){
+        if(c==='"'){ if(texto[i+1]==='"'){ campo+='"'; i++; } else aspas=false; }
+        else campo+=c;
+      } else if(c==='"') aspas=true;
+      else if(c===sep){ linha.push(campo); campo=""; }
+      else if(c==="\n" || c==="\r"){ if(c==="\r" && texto[i+1]==="\n") i++; linha.push(campo); linhas.push(linha); linha=[]; campo=""; }
+      else campo+=c;
+    }
+    if(campo!=="" || linha.length){ linha.push(campo); linhas.push(linha); }
+    return linhas.filter(l=>l.some(v=>v.trim()!==""));
+  }
+  const semAcento = s => String(s||"").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  function dataISO(v){
+    v=String(v||"").trim();
+    let m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if(m){ const y=m[3].length===2?"20"+m[3]:m[3]; return y+"-"+pad(+m[2])+"-"+pad(+m[1]); }
+    m=v.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[1]+"-"+m[2]+"-"+m[3];
+    return null;
+  }
+  const hora = v => { const m=String(v||"").trim().match(/^(\d{1,2}):(\d{2})/); return m ? pad(+m[1])+":"+m[2] : ""; };
+  const numOk = v => { const n=num(v); return (n==null||isNaN(n)) ? null : n; };
+
+  async function importar(texto){
+    const linhas=lerCSV(texto);
+    if(linhas.length<2) return msgBackup("Não encontrei registros nesse arquivo. Use a planilha baixada pelo próprio Diário.",true);
+    const cab=linhas[0].map(semAcento);
+    const col = nome => cab.indexOf(semAcento(nome));
+    const iData=col("Data");
+    if(iData<0 || col("Empresa entrega")<0) return msgBackup("Essa planilha não parece ser do Diário de Fretes. Use o arquivo baixado em “Baixar todos os registros”.",true);
+    const pega = (l,nome) => { const i=col(nome); return i<0 ? "" : (l[i]??"").trim(); };
+    const existentes=new Set(trips.map(t=>t.id));
+    let novos=0, atualizados=0, ignorados=0;
+    const novasEmpresas={};
+    for(const l of linhas.slice(1)){
+      const data=dataISO(l[iData]);
+      if(!data){ ignorados++; continue; }
+      const tipo = semAcento(pega(l,"Tipo")).startsWith("so") ? "so_entrega" : "coleta_entrega";
+      const d={
+        tipo, data,
+        coletaEmpresa: tipo==="so_entrega" ? "" : pega(l,"Empresa coleta"),
+        coletaHora: hora(pega(l,"Horário coleta")),
+        partidaHora: hora(pega(l,"Horário partida")),
+        entregaEmpresa: pega(l,"Empresa entrega"),
+        entregaHora: hora(pega(l,"Horário entrega")),
+        kmSaida: numOk(pega(l,"Km saída")),
+        kmChegada: numOk(pega(l,"Km chegada")),
+        kmRota: numOk(pega(l,"Km do trecho (Maps)")),
+        valor: numOk(pega(l,"Valor (R$)")),
+        pedagio: numOk(pega(l,"Pedágio (R$)")),
+        combustivel: numOk(pega(l,"Combustível (R$)")),
+        outros: numOk(pega(l,"Outros (R$)")),
+        obs: pega(l,"Observação"),
+      };
+      // planilhas antigas não tinham a coluna do Maps: usa o km rodado
+      if(d.kmRota==null && (d.kmSaida==null || d.kmChegada==null)) d.kmRota = numOk(pega(l,"Km rodado"));
+      let id = pega(l,"ID").replace(/[^A-Za-z0-9_\-]/g,"");
+      if(!id) id = "i"+slug(data+"-"+(d.coletaHora||d.partidaHora)+"-"+d.coletaEmpresa+"-"+d.entregaEmpresa).slice(0,120);
+      const velho = trips.find(t=>t.id===id);
+      d.criadoEm = velho?.criadoEm || new Date().toISOString();
+      try{ await store.put(id,d); }catch(err){ return msgBackup("A importação parou no meio: não foi possível salvar. "+(novos+atualizados)+" registros entraram.",true); }
+      if(existentes.has(id)) atualizados++; else { novos++; existentes.add(id); }
+      [["Empresa coleta","Endereço coleta"],["Empresa entrega","Endereço entrega"]].forEach(([cn,ce])=>{
+        const nome=pega(l,cn), end=lerEndereco(pega(l,ce)), k=slug(nome);
+        if(nome && end && k && !empresas[k] && !novasEmpresas[k]) novasEmpresas[k]={nome, endereco:end.endereco, link:end.link, atualizadoEm:new Date().toISOString()};
+      });
+    }
+    for(const [k,doc] of Object.entries(novasEmpresas)){ empresas[k]=doc; try{ await empStore?.put(k,doc); }catch(e){} }
+    render();
+    const partes=[];
+    if(novos) partes.push(novos+(novos>1?" registros novos":" registro novo"));
+    if(atualizados) partes.push(atualizados+(atualizados>1?" atualizados":" atualizado"));
+    const ne=Object.keys(novasEmpresas).length; if(ne) partes.push(ne+(ne>1?" endereços de empresas":" endereço de empresa"));
+    msgBackup(partes.length ? "Pronto: "+partes.join(", ")+"."+(ignorados?" "+ignorados+" linha(s) sem data foram ignoradas.":"") : "Nenhum registro encontrado no arquivo.", !partes.length);
+  }
+  $("f-import").addEventListener("change", async ()=>{
+    const f=$("f-import").files[0]; if(!f) return;
+    msgBackup("Carregando…");
+    try{ await importar(await f.text()); }catch(err){ msgBackup("Não foi possível ler o arquivo.",true); }
+    $("f-import").value="";
+  });
+  document.querySelector('label[for="f-import"]').addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); $("f-import").click(); } });
+  $("btn-colar").addEventListener("click", async ()=>{
+    const t=$("f-colar").value; if(!t.trim()) return msgBackup("Cole os dados no campo antes de importar.",true);
+    await importar(t); $("f-colar").value="";
+  });
+
+  try{ const v=sessionStorage.getItem("diario-view"); if(v && $("v-"+v)) setView(v); }catch(e){}
+  init();
+})();
+</script>
+
+</body>
+</html>
