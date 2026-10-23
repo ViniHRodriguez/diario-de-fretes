@@ -1,6 +1,6 @@
 // Diário de Fretes — funciona sem internet.
 // Troque a versão quando publicar um index.html novo, para os celulares baixarem a atualização.
-const VERSAO = "fretes-v2";
+const VERSAO = "fretes-v3";
 const ARQUIVOS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
@@ -27,4 +27,16 @@ self.addEventListener("fetch", e => {
       return guardado || rede;
     }));
   }
+});
+
+// toque na notificação "Em rota": abre o app no cartão de chegada
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const abas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const c of abas) {
+      if (new URL(c.url).origin === location.origin) { c.postMessage({ tipo: "abrir-rota" }); return c.focus(); }
+    }
+    return self.clients.openWindow("./?rota=1");
+  })());
 });

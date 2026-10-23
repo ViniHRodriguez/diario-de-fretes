@@ -204,6 +204,14 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
 .aviso{display:flex;gap:12px;align-items:flex-start;background:color-mix(in srgb,var(--warn) 10%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 35%,var(--line));border-radius:14px;padding:14px;font-size:.9rem}
 .aviso svg{flex:none;color:var(--warn);margin-top:2px}
 
+/* lembrete de chegada */
+.lembrete{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px dashed var(--line);border-radius:12px;padding:10px 10px 10px 12px;font-size:.88rem;color:var(--muted)}
+.lembrete svg{color:var(--accent)}
+.lembrete .btn{min-height:40px;padding:6px 14px}
+.lembrete.on{grid-template-columns:22px minmax(0,1fr)}
+@keyframes chama{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 0%,transparent)}50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--accent) 35%,transparent)}}
+.rota-card.chama{animation:chama .9s ease-in-out 3}
+
 /* aviso de instalação */
 .install{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:12px;align-items:center;background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:12px 10px 12px 12px}
 .install img{border-radius:10px;display:block}
@@ -340,6 +348,11 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
           <button type="button" class="link" id="btn-modo">Lançar trecho já feito</button>
           <button type="button" class="link" id="btn-cancelar" hidden>Cancelar edição</button>
         </div>
+      </div>
+      <div class="lembrete so-rapido" id="lembrete-box" hidden>
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 21h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <p id="lembrete-txt">Ative o lembrete de chegada: durante a viagem fica um aviso no celular para você não esquecer de finalizar a entrega.</p>
+        <button type="button" class="btn plain" id="btn-lembrete">Ativar</button>
       </div>
       <p class="note so-rapido" id="nota-form">A hora de partida é registrada no toque do botão e o Maps abre já navegando. Rotas já feitas trazem o km sozinhas.</p>
     </form>
@@ -720,8 +733,11 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
     d.entregaHora=""; d.kmChegada=null;
     d.criadoEm=new Date().toISOString();
     if(salvandoPartida) return; salvandoPartida=true;
+    const novo=novoId();
+    prepararSom();
+    lembreteRota(novo, d);
     try{
-      await store.put(novoId(),d);
+      await store.put(novo,d);
       $("filtro-data").value=d.data;
       novoForm(); setMsg("Partida registrada às "+d.partidaHora+". Boa viagem!");
       render();
@@ -880,6 +896,7 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
     try{
       await store.put(id,d);
       delete rascunhos[id];
+      fecharLembrete(id);
       const rodado = kmTrecho(d);
       const rod = rodado!=null ? " · "+fmtKm(rodado)+" km rodados" : "";
       setMsg("Chegada registrada às "+d.entregaHora+rod+".");
@@ -993,7 +1010,7 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
     else if(b.dataset.delNo){ confirmDel=null; render(); }
     else if(b.dataset.delOk){
       const id=b.dataset.delOk; confirmDel=null;
-      try{ await store.del(id); if(editId===id) novoForm(); }catch(err){ setMsg("Não foi possível excluir.",true); }
+      try{ await store.del(id); fecharLembrete(id); if(editId===id) novoForm(); }catch(err){ setMsg("Não foi possível excluir.",true); }
       render();
     }
   });
@@ -1133,6 +1150,75 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
     await importar(t); $("f-colar").value="";
   });
 
+  // ---------- lembrete de chegada (só na versão publicada fora do Claude) ----------
+  const podeNotificar = () => !window.claude && "Notification" in window && "serviceWorker" in navigator;
+  function atualizaLembreteBox(){
+    const box=$("lembrete-box");
+    if(!podeNotificar() || Notification.permission==="denied"){ box.hidden=true; return; }
+    box.hidden=false;
+    const ativo = Notification.permission==="granted";
+    box.classList.toggle("on",ativo);
+    $("btn-lembrete").hidden=ativo;
+    $("lembrete-txt").textContent = ativo
+      ? "Lembrete de chegada ativado: durante a viagem fica um aviso no celular para finalizar a entrega."
+      : "Ative o lembrete de chegada: durante a viagem fica um aviso no celular para você não esquecer de finalizar a entrega.";
+  }
+  $("btn-lembrete").addEventListener("click", async ()=>{
+    let r="default";
+    try{ r = await Notification.requestPermission(); }catch(e){}
+    atualizaLembreteBox();
+    if(r==="granted") setMsg("Lembrete ativado.");
+    else if(r==="denied") setMsg("As notificações estão bloqueadas. Libere nas configurações do navegador para usar o lembrete.",true);
+  });
+  async function lembreteRota(id, t){
+    if(!podeNotificar() || Notification.permission!=="granted") return;
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification("Em rota para "+(t.entregaEmpresa||"o destino"), {
+        body:"Ao chegar, toque aqui para registrar a entrega no app.",
+        tag:"rota-"+id, requireInteraction:true, renotify:false, silent:false,
+        icon:"icon-192.png", badge:"icon-192.png", vibrate:[200,100,200],
+        data:{rota:id}
+      });
+    }catch(e){}
+  }
+  async function fecharLembrete(id){
+    if(!podeNotificar()) return;
+    try{ const reg=await navigator.serviceWorker.ready; (await reg.getNotifications({tag:"rota-"+id})).forEach(n=>n.close()); }catch(e){}
+  }
+  // som curto (precisa ser preparado num toque do motorista)
+  let audioCtx=null;
+  function prepararSom(){ try{ audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)(); audioCtx.resume?.(); }catch(e){} }
+  function bipe(){
+    try{
+      if(!audioCtx) return; audioCtx.resume?.();
+      const t0=audioCtx.currentTime;
+      [0,0.22].forEach(dt=>{
+        const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+        o.type="sine"; o.frequency.value=880; o.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.0001,t0+dt); g.gain.exponentialRampToValueAtTime(0.35,t0+dt+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t0+dt+0.18);
+        o.start(t0+dt); o.stop(t0+dt+0.2);
+      });
+    }catch(e){}
+  }
+  // ao voltar para o app com trecho em andamento: vibra, bipa e destaca o botão "Cheguei"
+  function chamarAtencao(){
+    const abertos=trips.filter(t=>!t.entregaHora); if(!abertos.length) return;
+    const velho = abertos.some(t=>Date.now()-Date.parse(t.criadoEm||0) > 2*60000);
+    if(!velho) return;
+    setView("inicio");
+    try{ navigator.vibrate?.([200,100,200]); }catch(e){}
+    bipe();
+    const card=document.querySelector(".rota-card");
+    if(card){ card.classList.remove("chama"); void card.offsetWidth; card.classList.add("chama"); }
+    setMsg("Já chegou? Toque em “Cheguei” para finalizar a entrega.");
+  }
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") chamarAtencao(); });
+  if(podeNotificar()){
+    navigator.serviceWorker.addEventListener?.("message", e=>{ if(e.data?.tipo==="abrir-rota") chamarAtencao(); });
+  }
+  atualizaLembreteBox();
+
   // ---------- app instalável (só na versão publicada fora do Claude) ----------
   (function(){
     if(window.claude) return;
@@ -1152,6 +1238,7 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
     $("btn-install-x").addEventListener("click", ()=>{ box.hidden=true; try{ localStorage.setItem("diario-install-fechado","1"); }catch(e){} });
   })();
 
+  if(/[?&]rota=/.test(location.search)){ setTimeout(()=>{ setView("inicio"); }, 0); try{ history.replaceState(null,"",location.pathname); }catch(e){} }
   try{ const v=sessionStorage.getItem("diario-view"); if(v && $("v-"+v)) setView(v); }catch(e){}
   init();
 })();
