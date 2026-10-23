@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#262e3a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Fretes">
@@ -201,6 +204,14 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
 .aviso{display:flex;gap:12px;align-items:flex-start;background:color-mix(in srgb,var(--warn) 10%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 35%,var(--line));border-radius:14px;padding:14px;font-size:.9rem}
 .aviso svg{flex:none;color:var(--warn);margin-top:2px}
 
+/* aviso de instalação */
+.install{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:12px;align-items:center;background:var(--card);border:1.5px solid var(--accent);border-radius:16px;padding:12px 10px 12px 12px}
+.install img{border-radius:10px;display:block}
+.install-txt b{display:block;font-size:.98rem}
+.install .btn{min-height:42px;padding:8px 16px}
+.install-x{border:0;background:none;color:var(--muted);font-size:1.5rem;line-height:1;width:36px;height:36px;border-radius:50%;cursor:pointer}
+@media (max-width:380px){.install{grid-template-columns:44px minmax(0,1fr) auto}.install .btn{grid-column:2/-1;justify-self:start}}
+
 /* barra de abas */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--card);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -6px 18px -14px rgb(0 0 0 / .35)}
@@ -221,7 +232,7 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
 <header class="appbar gutter">
   <div class="col">
     <div class="brand">
-      <svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><rect x="1" y="3" width="17" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M18 7h5.5l4 4.5V15H18z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="17.5" r="2.5" fill="var(--accent)"/><circle cx="22.5" cy="17.5" r="2.5" fill="var(--accent)"/></svg>
+      <svg width="32" height="22" viewBox="0 0 32 22" aria-hidden="true"><path d="M1.5 10h11l.8-5.5h5.4l3.6 4.3 4.2.9 1.5 1.8V15.5H1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12.5 10v5.5" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="16.5" r="3" fill="var(--accent)"/><circle cx="23" cy="16.5" r="3" fill="var(--accent)"/></svg>
       Diário de Fretes
     </div>
     <span class="hoje" id="hoje-label"></span>
@@ -233,6 +244,13 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
 
   <!-- INÍCIO -->
   <section class="view" id="v-inicio" aria-label="Início">
+    <div class="install" id="install" hidden>
+      <img src="icon-192.png" alt="" width="44" height="44">
+      <div class="install-txt"><b>Instale o app no celular</b><p class="note" id="install-dica">Fica com ícone na tela e abre como aplicativo, mesmo sem internet.</p></div>
+      <button type="button" class="btn primary" id="btn-install" hidden>Instalar</button>
+      <button type="button" class="install-x" id="btn-install-x" aria-label="Fechar aviso">×</button>
+    </div>
+
     <div class="hoje-strip" aria-label="Resumo de hoje">
       <div><span class="label">Trechos hoje</span><b id="h-trechos">0</b></div>
       <div><span class="label">Km hoje</span><b id="h-km">0</b></div>
@@ -1114,6 +1132,25 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible,label.btn:focus-
     const t=$("f-colar").value; if(!t.trim()) return msgBackup("Cole os dados no campo antes de importar.",true);
     await importar(t); $("f-colar").value="";
   });
+
+  // ---------- app instalável (só na versão publicada fora do Claude) ----------
+  (function(){
+    if(window.claude) return;
+    if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")){
+      navigator.serviceWorker.register("sw.js").catch(()=>{});
+    }
+    const instalado = matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
+    let fechado=false; try{ fechado = localStorage.getItem("diario-install-fechado")==="1"; }catch(e){}
+    if(instalado || fechado) return;
+    const box=$("install"), btn=$("btn-install"), dica=$("install-dica");
+    let pedido=null;
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+    if(ios){ dica.textContent="No Safari, toque em Compartilhar (quadrado com seta) e depois em “Adicionar à Tela de Início”."; box.hidden=false; }
+    window.addEventListener("beforeinstallprompt", e=>{ e.preventDefault(); pedido=e; btn.hidden=false; box.hidden=false; });
+    window.addEventListener("appinstalled", ()=>{ box.hidden=true; setMsg("App instalado. Procure o ícone “Fretes” na tela do celular."); });
+    btn.addEventListener("click", async ()=>{ if(!pedido) return; pedido.prompt(); try{ await pedido.userChoice; }catch(e){} pedido=null; btn.hidden=true; box.hidden=true; });
+    $("btn-install-x").addEventListener("click", ()=>{ box.hidden=true; try{ localStorage.setItem("diario-install-fechado","1"); }catch(e){} });
+  })();
 
   try{ const v=sessionStorage.getItem("diario-view"); if(v && $("v-"+v)) setView(v); }catch(e){}
   init();
